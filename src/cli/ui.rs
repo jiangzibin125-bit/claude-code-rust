@@ -314,6 +314,82 @@ pub fn print_info(message: &str) {
     println!("  {} {}", "ℹ".cyan(), message.cyan());
 }
 
+/// Print separator when tool calls begin
+pub fn print_tool_calls_start() {
+    println!();
+    println!("  {}", "━".repeat(50).truecolor(100, 80, 120));
+    println!();
+}
+
+/// Print a single tool call being invoked
+pub fn print_tool_call(tool_name: &str, args: &str) {
+    print!("  {} ", "●".truecolor(80, 200, 255).bold());
+    println!(" {} {}", "TOOL".truecolor(80, 200, 255).bold(), tool_name.truecolor(255, 200, 100).bold());
+    if !args.is_empty() && args != "null" {
+        println!("  {} {}", "│".truecolor(80, 80, 120), "Arguments:".truecolor(120, 120, 120));
+        // Pretty-print JSON arguments if possible
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(args) {
+            let pretty = serde_json::to_string_pretty(&json).unwrap_or_else(|_| args.to_string());
+            for line in pretty.lines().take(10) {
+                println!("  {} {}", "│".truecolor(80, 80, 120), line.truecolor(180, 180, 180));
+            }
+            if pretty.lines().count() > 10 {
+                println!("  {} {}", "│".truecolor(80, 80, 120), "...".bright_black());
+            }
+        } else {
+            for line in args.lines().take(10) {
+                println!("  {} {}", "│".truecolor(80, 80, 120), line.truecolor(180, 180, 180));
+            }
+        }
+    }
+}
+
+/// Print the result of a tool execution
+pub fn print_tool_result(tool_name: &str, result: &str, is_error: bool) {
+    let (icon, color_label) = if is_error {
+        ("✗", "ERROR".red())
+    } else {
+        ("✓", "OK".green())
+    };
+    print!("  {} ", icon.truecolor(if is_error { 255 } else { 80 }, if is_error { 100 } else { 200 }, if is_error { 100 } else { 80 }).bold());
+    println!(" {} {} {}", color_label, "←".truecolor(100, 100, 100), tool_name.truecolor(255, 200, 100).bold());
+
+    // Print truncated result
+    let max_len = 500;
+    let display = if result.len() > max_len {
+        format!("{}... ({} chars, truncated)", &result[..max_len], result.len())
+    } else {
+        result.to_string()
+    };
+
+    for line in display.lines().take(15) {
+        if is_error {
+            println!("  {} {}", "│".truecolor(120, 80, 80), line.truecolor(255, 150, 150));
+        } else {
+            println!("  {} {}", "│".truecolor(80, 120, 100), line.truecolor(150, 220, 180));
+        }
+    }
+    if display.lines().count() > 15 {
+        println!("  {} {}", "│".truecolor(100, 100, 100), "...".bright_black());
+    }
+}
+
+/// Print separator after all tool calls complete
+pub fn print_tool_calls_end() {
+    println!();
+    println!("  {}", "━".repeat(50).truecolor(100, 80, 120));
+    println!();
+}
+
+/// Print a compact tool call progress (single line, for fast execution)
+pub fn print_tool_exec_line(tool_name: &str, done: bool) {
+    if done {
+        println!("  {} {}", "✓".green(), format!("{} done", tool_name).bright_black());
+    } else {
+        print!("  {} {} ... ", "⚙".cyan(), tool_name.truecolor(255, 200, 100));
+    }
+}
+
 /// Print a code block with syntax highlighting simulation
 pub fn print_code_block(code: &str, language: Option<&str>) {
     let lang = language.unwrap_or("");
